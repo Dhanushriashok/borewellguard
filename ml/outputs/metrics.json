@@ -1,0 +1,363 @@
+{
+  "data_source": "synthetic",
+  "best_model": "Logistic Regression",
+  "critical_escalation": {
+    "rule": "P(Critical) >= threshold -> Critical",
+    "threshold": 0.25,
+    "target_recall_on_training_oof": 0.92,
+    "oof_sweep": [
+      {
+        "threshold": 0.5,
+        "recall": 0.8205,
+        "precision": 0.8707
+      },
+      {
+        "threshold": 0.49,
+        "recall": 0.8221,
+        "precision": 0.871
+      },
+      {
+        "threshold": 0.48,
+        "recall": 0.8253,
+        "precision": 0.867
+      },
+      {
+        "threshold": 0.47,
+        "recall": 0.8253,
+        "precision": 0.8598
+      },
+      {
+        "threshold": 0.46,
+        "recall": 0.8301,
+        "precision": 0.8576
+      },
+      {
+        "threshold": 0.45,
+        "recall": 0.8365,
+        "precision": 0.8543
+      },
+      {
+        "threshold": 0.44,
+        "recall": 0.8429,
+        "precision": 0.8498
+      },
+      {
+        "threshold": 0.43,
+        "recall": 0.8462,
+        "precision": 0.8448
+      },
+      {
+        "threshold": 0.42,
+        "recall": 0.851,
+        "precision": 0.8375
+      },
+      {
+        "threshold": 0.41,
+        "recall": 0.8606,
+        "precision": 0.8351
+      },
+      {
+        "threshold": 0.4,
+        "recall": 0.8686,
+        "precision": 0.83
+      },
+      {
+        "threshold": 0.39,
+        "recall": 0.8686,
+        "precision": 0.8262
+      },
+      {
+        "threshold": 0.38,
+        "recall": 0.8734,
+        "precision": 0.8195
+      },
+      {
+        "threshold": 0.37,
+        "recall": 0.8798,
+        "precision": 0.8133
+      },
+      {
+        "threshold": 0.36,
+        "recall": 0.8862,
+        "precision": 0.8097
+      },
+      {
+        "threshold": 0.35,
+        "recall": 0.891,
+        "precision": 0.8035
+      },
+      {
+        "threshold": 0.34,
+        "recall": 0.8942,
+        "precision": 0.8006
+      },
+      {
+        "threshold": 0.33,
+        "recall": 0.8958,
+        "precision": 0.794
+      },
+      {
+        "threshold": 0.32,
+        "recall": 0.8974,
+        "precision": 0.7865
+      },
+      {
+        "threshold": 0.31,
+        "recall": 0.899,
+        "precision": 0.7813
+      },
+      {
+        "threshold": 0.3,
+        "recall": 0.9022,
+        "precision": 0.7776
+      },
+      {
+        "threshold": 0.29,
+        "recall": 0.9119,
+        "precision": 0.771
+      },
+      {
+        "threshold": 0.28,
+        "recall": 0.9135,
+        "precision": 0.7631
+      },
+      {
+        "threshold": 0.27,
+        "recall": 0.9199,
+        "precision": 0.7573
+      },
+      {
+        "threshold": 0.26,
+        "recall": 0.9199,
+        "precision": 0.7493
+      },
+      {
+        "threshold": 0.25,
+        "recall": 0.9263,
+        "precision": 0.7448
+      },
+      {
+        "threshold": 0.24,
+        "recall": 0.9295,
+        "precision": 0.736
+      },
+      {
+        "threshold": 0.23,
+        "recall": 0.9311,
+        "precision": 0.7253
+      },
+      {
+        "threshold": 0.22,
+        "recall": 0.9327,
+        "precision": 0.7194
+      },
+      {
+        "threshold": 0.21,
+        "recall": 0.9343,
+        "precision": 0.7084
+      },
+      {
+        "threshold": 0.2,
+        "recall": 0.9359,
+        "precision": 0.6977
+      },
+      {
+        "threshold": 0.19,
+        "recall": 0.9359,
+        "precision": 0.6903
+      },
+      {
+        "threshold": 0.18,
+        "recall": 0.9439,
+        "precision": 0.6794
+      },
+      {
+        "threshold": 0.17,
+        "recall": 0.9503,
+        "precision": 0.6723
+      },
+      {
+        "threshold": 0.16,
+        "recall": 0.9535,
+        "precision": 0.6618
+      },
+      {
+        "threshold": 0.15,
+        "recall": 0.9535,
+        "precision": 0.6531
+      },
+      {
+        "threshold": 0.14,
+        "recall": 0.9551,
+        "precision": 0.645
+      },
+      {
+        "threshold": 0.13,
+        "recall": 0.9583,
+        "precision": 0.6308
+      },
+      {
+        "threshold": 0.12,
+        "recall": 0.9599,
+        "precision": 0.624
+      },
+      {
+        "threshold": 0.11,
+        "recall": 0.9631,
+        "precision": 0.6071
+      },
+      {
+        "threshold": 0.1,
+        "recall": 0.9679,
+        "precision": 0.5945
+      },
+      {
+        "threshold": 0.09,
+        "recall": 0.9712,
+        "precision": 0.5838
+      },
+      {
+        "threshold": 0.08,
+        "recall": 0.9728,
+        "precision": 0.57
+      },
+      {
+        "threshold": 0.07,
+        "recall": 0.9808,
+        "precision": 0.5514
+      },
+      {
+        "threshold": 0.06,
+        "recall": 0.984,
+        "precision": 0.5358
+      },
+      {
+        "threshold": 0.05,
+        "recall": 0.9856,
+        "precision": 0.5104
+      },
+      {
+        "threshold": 0.04,
+        "recall": 0.9904,
+        "precision": 0.4905
+      },
+      {
+        "threshold": 0.03,
+        "recall": 0.9952,
+        "precision": 0.4648
+      },
+      {
+        "threshold": 0.02,
+        "recall": 0.9984,
+        "precision": 0.4338
+      }
+    ]
+  },
+  "test_rows": 1200,
+  "results": {
+    "Rule-based (current app)": {
+      "accuracy": 0.5133333333333333,
+      "macro_f1": 0.5103379831136807,
+      "within_one_level": 0.9383333333333334,
+      "under_triage_rate": 0.023333333333333334,
+      "critical_recall": 0.9038461538461539,
+      "critical_precision": 0.4208955223880597
+    },
+    "Logistic Regression": {
+      "accuracy": 0.7916666666666666,
+      "macro_f1": 0.780819025234056,
+      "within_one_level": 1.0,
+      "under_triage_rate": 0.115,
+      "critical_recall": 0.7435897435897436,
+      "critical_precision": 0.8285714285714286,
+      "cv_macro_f1_mean": 0.8257577457413892,
+      "cv_macro_f1_std": 0.007986050276026772
+    },
+    "Random Forest": {
+      "accuracy": 0.7866666666666666,
+      "macro_f1": 0.7822517574088679,
+      "within_one_level": 0.9991666666666666,
+      "under_triage_rate": 0.10916666666666666,
+      "critical_recall": 0.7884615384615384,
+      "critical_precision": 0.8482758620689655,
+      "cv_macro_f1_mean": 0.794267631921057,
+      "cv_macro_f1_std": 0.005899670510847684
+    },
+    "Gradient Boosting": {
+      "accuracy": 0.785,
+      "macro_f1": 0.7801606667384899,
+      "within_one_level": 0.9975,
+      "under_triage_rate": 0.1225,
+      "critical_recall": 0.7692307692307693,
+      "critical_precision": 0.8633093525179856,
+      "cv_macro_f1_mean": 0.7865810840051413,
+      "cv_macro_f1_std": 0.008717836920448042
+    },
+    "Logistic Regression + Critical escalation": {
+      "accuracy": 0.79,
+      "macro_f1": 0.778645915378556,
+      "within_one_level": 0.9983333333333333,
+      "under_triage_rate": 0.09333333333333334,
+      "critical_recall": 0.9102564102564102,
+      "critical_precision": 0.7282051282051282
+    }
+  },
+  "permutation_importance": [
+    {
+      "feature": "cover_condition",
+      "importance": 0.3798,
+      "std": 0.0104
+    },
+    {
+      "feature": "children_nearby",
+      "importance": 0.1171,
+      "std": 0.0084
+    },
+    {
+      "feature": "nearby_population",
+      "importance": 0.1011,
+      "std": 0.0085
+    },
+    {
+      "feature": "nearby_access",
+      "importance": 0.0853,
+      "std": 0.0116
+    },
+    {
+      "feature": "days_since_inspection",
+      "importance": 0.0436,
+      "std": 0.009
+    },
+    {
+      "feature": "fenced_or_marked",
+      "importance": 0.0392,
+      "std": 0.0073
+    },
+    {
+      "feature": "abandoned",
+      "importance": 0.0293,
+      "std": 0.004
+    },
+    {
+      "feature": "prior_incidents_2km",
+      "importance": 0.0139,
+      "std": 0.0035
+    },
+    {
+      "feature": "borewell_age_years",
+      "importance": 0.0045,
+      "std": 0.004
+    },
+    {
+      "feature": "depth_ft",
+      "importance": 0.002,
+      "std": 0.0063
+    },
+    {
+      "feature": "rainfall_30d_mm",
+      "importance": -0.0004,
+      "std": 0.0048
+    }
+  ],
+  "caveat": "Metrics are on SYNTHETIC data; they do not measure real-world accuracy."
+}

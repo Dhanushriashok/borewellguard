@@ -1,0 +1,2 @@
+-r ml/requirements.txt
+-r backend/requirements.txt

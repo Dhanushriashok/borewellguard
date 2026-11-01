@@ -1,0 +1,12 @@
+{
+  "data_source": "synthetic",
+  "rows": 6000,
+  "seed": 42,
+  "note": "Artificial data from a hand-designed hazard model. Not real incidents.",
+  "class_counts": {
+    "Low": 2100,
+    "Medium": 1800,
+    "High": 1320,
+    "Critical": 780
+  }
+}
