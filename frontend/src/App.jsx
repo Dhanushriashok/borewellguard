@@ -3,6 +3,7 @@ import "./App.css";
 
 // Backend address. For deployment set VITE_API_URL in the frontend environment.
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const IS_LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(API);
 
 const emptyForm = {
   location: "",
@@ -49,13 +50,19 @@ async function api(path, options = {}) {
       ...options,
     });
   } catch {
-    throw new Error(
-      "Cannot reach the backend. Start it with: py -m uvicorn backend.app:app --port 8000"
+    const err = new Error(
+      IS_LOCAL
+        ? "Cannot reach the backend. Start it with: py -m uvicorn backend.app:app --port 8000"
+        : "Cannot reach the server. It may be waking up from idle; please try again in a minute."
     );
+    err.network = true;
+    throw err;
   }
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(describeError(body && body.detail) || `Request failed (${res.status})`);
+    const err = new Error(describeError(body && body.detail) || `Request failed (${res.status})`);
+    err.network = [502, 503, 504].includes(res.status); // gateway errors while a free server wakes up
+    throw err;
   }
   return body;
 }
@@ -105,6 +112,7 @@ function App() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [waking, setWaking] = useState(false);
   const [filter, setFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -112,18 +120,32 @@ function App() {
   const [result, setResult] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
-  function loadReports() {
+  // Free hosting puts the server to sleep when idle; the first request can take about a
+  // minute. On a deployed site, retry quietly (up to ~90 s) instead of showing an error.
+  function loadReports(attempt = 0) {
     setLoading(true);
     api("/api/reports")
       .then((data) => {
         setReports(data);
         setLoadError("");
+        setWaking(false);
+        setLoading(false);
       })
-      .catch((err) => setLoadError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (err.network && !IS_LOCAL && attempt < 18) {
+          setWaking(true);
+          setTimeout(() => loadReports(attempt + 1), 5000);
+          return;
+        }
+        setWaking(false);
+        setLoadError(err.message);
+        setLoading(false);
+      });
   }
 
-  useEffect(loadReports, []);
+  useEffect(() => {
+    loadReports();
+  }, []);
 
   const criticalCount = reports.filter((r) => r.risk_level === "Critical").length;
   const openCount = reports.filter((r) => r.status !== "Verified safe").length;
@@ -218,6 +240,12 @@ function App() {
           <div className="welcome-symbol" aria-hidden="true">⌖</div>
         </section>
 
+        {waking && (
+          <div className="success-message">
+            The server is waking up from idle (free hosting). This can take up to a
+            minute; loading automatically…
+          </div>
+        )}
         {loadError && <div className="error-banner">{loadError}</div>}
 
         <section className="metrics-grid">

@@ -22,7 +22,7 @@ import json
 import os
 import sqlite3
 import sys
-from contextlib import closing
+from contextlib import asynccontextmanager, closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, Optional
@@ -104,7 +104,20 @@ class StatusIn(BaseModel):
     status: Literal["Pending inspection", "Inspection completed", "Verified safe"]
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Free hosting wipes local files whenever the service restarts, so an empty database
+    # would make a live demo look broken. SEED_DEMO=1 adds the labelled "(demo)" reports,
+    # and only when the database has no reports yet.
+    if os.environ.get("SEED_DEMO") == "1":
+        from backend.seed_demo import main as seed_demo
+
+        seed_demo()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="BorewellGuard API",
     version="0.3.0",
     description="Borewell hazard reporting with ML risk prediction. "
@@ -121,6 +134,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type"],
 )
+
 
 # --------------------------------------------------------------------------- #
 # database
@@ -144,7 +158,9 @@ CREATE TABLE IF NOT EXISTS reports (
     top_factors      TEXT NOT NULL,
     model            TEXT NOT NULL,
     data_source      TEXT NOT NULL,
-    status           TEXT NOT NULL DEFAULT 'Pending inspection'
+    status           TEXT NOT NULL DEFAULT 'Pending inspection',
+    escalated        INTEGER NOT NULL DEFAULT 0,
+    escalation_note  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_reports_risk ON reports(risk_level);
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
@@ -155,6 +171,13 @@ def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(db_path())
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    # Upgrade databases created before escalation existed (keeps old reports).
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(reports)")}
+    if "escalated" not in existing:
+        conn.execute("ALTER TABLE reports ADD COLUMN escalated INTEGER NOT NULL DEFAULT 0")
+    if "escalation_note" not in existing:
+        conn.execute("ALTER TABLE reports ADD COLUMN escalation_note TEXT")
+    conn.commit()
     return conn
 
 
@@ -184,6 +207,8 @@ def row_to_report(row: sqlite3.Row) -> dict:
         "confidence": row["confidence"],
         "probabilities": json.loads(row["probabilities"]),
         "top_factors": json.loads(row["top_factors"]),
+        "escalated": bool(row["escalated"]),
+        "escalation_note": row["escalation_note"],
         "model": row["model"],
         "data_source": row["data_source"],
         "status": row["status"],
@@ -254,8 +279,9 @@ def create_report(payload: ReportIn):
         cur = conn.execute(
             """INSERT INTO reports
                (created_at, location, latitude, longitude, features, assumed_defaults,
-                risk_level, confidence, probabilities, top_factors, model, data_source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                risk_level, confidence, probabilities, top_factors, model, data_source,
+                escalated, escalation_note)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 created_at,
                 payload.location.strip(),
@@ -269,6 +295,8 @@ def create_report(payload: ReportIn):
                 json.dumps(result["top_factors"]),
                 result["model"],
                 result["data_source"],
+                int(result["escalated"]),
+                result["escalation_note"],
             ),
         )
         row = conn.execute("SELECT * FROM reports WHERE id = ?", (cur.lastrowid,)).fetchone()

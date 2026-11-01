@@ -140,3 +140,39 @@ def test_stats_counts(client):
     assert stats["total"] == 2
     assert sum(stats["by_risk"].values()) == 2
     assert stats["by_status"]["Pending inspection"] == 2
+
+
+@pytest.mark.parametrize(
+    "origin,allowed",
+    [
+        ("http://localhost:5173", True),
+        ("http://localhost:5174", True),
+        ("http://127.0.0.1:5173", True),
+        ("http://evil.example", False),
+        ("http://localhost.evil.example", False),
+    ],
+)
+def test_cors_origins(client, origin, allowed):
+    res = client.options(
+        "/api/reports",
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST"},
+    )
+    assert (res.headers.get("access-control-allow-origin") == origin) is allowed
+
+
+def test_seed_demo_on_startup_only_when_empty(tmp_path, monkeypatch):
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "seed.db"))
+    monkeypatch.setenv("SEED_DEMO", "1")
+    with TestClient(app) as first:
+        reports = first.get("/api/reports").json()
+        assert len(reports) == 8
+        assert all(r["location"].startswith("(demo)") for r in reports)
+    with TestClient(app) as second:  # restart with data already present: no duplicates
+        assert len(second.get("/api/reports").json()) == 8
+
+
+def test_no_seed_without_flag(tmp_path, monkeypatch):
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "noseed.db"))
+    monkeypatch.delenv("SEED_DEMO", raising=False)
+    with TestClient(app) as c:
+        assert c.get("/api/reports").json() == []
