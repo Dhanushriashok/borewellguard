@@ -4,7 +4,9 @@
 
 > **Honest scope note.** No public labelled dataset of borewell hazard reports exists, so the model is trained on **synthetic data** generated from a hand-designed hazard model (`ml/generate_data.py`). The metrics below show that the pipeline learns that encoded logic and beats the original rule-based scoring on it. They are **not** evidence of real-world field accuracy. The app is decision support only; a human inspection is always required.
 
-Live demo: _link added after deployment_
+**Live demo:** https://borewellguard-web.onrender.com  
+API documentation: https://borewellguard-api.onrender.com/docs  
+_Free hosting: after 15 minutes idle the server sleeps and the first load can take about a minute (the page shows a "waking up" message and retries). Reports submitted on the live demo are lost when the server restarts; the 8 labelled demo reports are re-created._
 
 ## Screenshots
 
@@ -88,7 +90,14 @@ npm run dev
 
 Run the tests from the repository root: `python -m pytest -q` (the ML tests need step 2 first).
 
-Configuration: `VITE_API_URL` (frontend, default `http://localhost:8000`), `ALLOWED_ORIGINS` (backend CORS for a deployed site), `DB_PATH` (SQLite file location).
+Configuration: `VITE_API_URL` (frontend, default `http://localhost:8000`), `ALLOWED_ORIGINS` (backend CORS for a deployed site), `DB_PATH` (SQLite file location), `SEED_DEMO=1` (add demo reports on startup when the database is empty).
+
+## Deployment (Render, free tier)
+
+- **API** (`borewellguard-api`, Web Service, Python): build `pip install -r requirements.txt && python ml/generate_data.py && python ml/train_model.py`, start `uvicorn backend.app:app --host 0.0.0.0 --port $PORT`, health check `/api/health`. Environment: `SEED_DEMO=1` (adds the labelled demo reports when the database is empty) and `ALLOWED_ORIGINS=<frontend URL>`.
+- **Dashboard** (`borewellguard-web`, Static Site): root directory `frontend`, build `npm install && npm run build`, publish directory `dist`. Environment: `VITE_API_URL=<API URL>` (read at build time).
+- The Python version is pinned in `.python-version`. The model is trained during the build, so no model file is committed.
+- Free-tier behaviour: the API sleeps after 15 minutes without traffic, and its disk is ephemeral, so reports are lost on restart. A production deployment would use a managed database.
 
 ## API
 
@@ -109,7 +118,7 @@ Interactive documentation is served at `/docs`.
 - Synthetic training data (see the scope note above). Replace `ml/data/synthetic_borewell_reports.csv` with real inspection records in the same columns and re-run `train_model.py` to get honest real-world metrics.
 - The escalation threshold and the explanation floor were tuned on synthetic data and would need re-tuning on real data.
 - The ML model predicts a level below the true one more often than the rule-based scoring does (9.3% vs 2.3% of test reports, almost always by one level), because the rule-based scoring errs towards over-flagging, which is also why its Critical precision is only 42%. Critical escalation is what keeps Critical recall level with the rule-based scoring.
-- No authentication, and SQLite suits a single server only. Both would change for a real deployment.
+- The live demo stores reports in SQLite on an ephemeral disk, so they do not survive a restart. No authentication, and SQLite suits a single server only. Both would change for a real deployment.
 - Location is free text with optional coordinates; there is no map or photo input yet.
 
 ## Safety
