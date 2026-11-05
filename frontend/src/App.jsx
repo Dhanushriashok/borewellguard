@@ -97,6 +97,22 @@ function isEscalated(report) {
   return report.risk_level === "Critical" && top !== "Critical";
 }
 
+const NAV = [
+  { id: "overview", icon: "▦", label: "Overview", eyebrow: "OVERVIEW", title: "Borewell Risk Dashboard",
+    subtitle: "Identify hazards. Prioritise inspections. Track safer outcomes." },
+  { id: "reports", icon: "⌖", label: "Borewell reports", eyebrow: "REPORTS", title: "Borewell Reports",
+    subtitle: "Submit a new report and review every record." },
+  { id: "risk", icon: "⚑", label: "Risk monitoring", eyebrow: "RISK MONITORING", title: "Risk Monitoring",
+    subtitle: "See how reported hazards are spread across risk levels and what drives them." },
+  { id: "inspection", icon: "✓", label: "Inspection tracking", eyebrow: "INSPECTION TRACKING", title: "Inspection Tracking",
+    subtitle: "Work through the queue, most urgent first." },
+];
+
+const LEVELS = ["Critical", "High", "Medium", "Low"];
+const LEVEL_COLORS = { Critical: "#ff6b6b", High: "#ffa84d", Medium: "#ffd24d", Low: "#b8f36a" };
+const STATUSES = ["Pending inspection", "Inspection completed", "Verified safe"];
+const severity = (r) => LEVELS.indexOf(r.risk_level);
+
 const precautionStyle = {
   display: "inline-block",
   marginLeft: 8,
@@ -119,6 +135,8 @@ function App() {
   const [formError, setFormError] = useState("");
   const [result, setResult] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [view, setView] = useState("overview");
+  const [statusFilter, setStatusFilter] = useState("Pending inspection");
 
   // Free hosting puts the server to sleep when idle; the first request can take about a
   // minute. On a deployed site, retry quietly (up to ~90 s) instead of showing an error.
@@ -179,16 +197,64 @@ function App() {
     }
   }
 
-  async function markInspected(id) {
+  function go(id) {
+    setView(id);
+    window.scrollTo({ top: 0 });
+  }
+
+  function startNewReport() {
+    setShowForm(true);
+    setFormError("");
+    setResult(null);
+    go("reports");
+  }
+
+  async function setStatus(id, status) {
     try {
       const updated = await api(`/api/reports/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status: "Inspection completed" }),
+        body: JSON.stringify({ status }),
       });
       setReports((current) => current.map((r) => (r.id === id ? updated : r)));
     } catch (err) {
       setLoadError(err.message);
     }
+  }
+
+  const current = NAV.find((n) => n.id === view);
+  const byUrgency = (list) => [...list].sort((a, b) => severity(a) - severity(b));
+  const attention = byUrgency(
+    reports.filter((r) => ["Critical", "High"].includes(r.risk_level) && r.status === "Pending inspection")
+  );
+
+  const levelRows = LEVELS.map((l) => ({
+    label: `${l} priority`,
+    count: reports.filter((r) => r.risk_level === l).length,
+    color: LEVEL_COLORS[l],
+  }));
+  const factorTally = {};
+  reports.forEach((r) => (r.top_factors || []).forEach((f) => {
+    factorTally[f.label] = (factorTally[f.label] || 0) + 1;
+  }));
+  const factorRows = Object.entries(factorTally)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, count]) => ({ label, count, color: "#b8f36a" }));
+  const escalatedCount = reports.filter(isEscalated).length;
+  const urgentPending = attention.length;
+  const highShare = reports.length
+    ? `${Math.round((100 * reports.filter((r) => ["Critical", "High"].includes(r.risk_level)).length) / reports.length)}%`
+    : "0%";
+
+  const statusRows = STATUSES.map((st) => ({
+    label: st, count: reports.filter((r) => r.status === st).length,
+  }));
+  const inspectionList = byUrgency(reports.filter((r) => r.status === statusFilter));
+
+  function renderCards(list, emptyText) {
+    if (loading) return <p className="empty-state">Loading reports…</p>;
+    if (list.length === 0) return loadError ? null : <p className="empty-state">{emptyText}</p>;
+    return list.map((report) => <ReportCard key={report.id} report={report} onStatus={setStatus} />);
   }
 
   return (
@@ -203,10 +269,18 @@ function App() {
         </div>
 
         <p className="nav-heading">WORKSPACE</p>
-        <div className="nav-item active">▦ &nbsp; Overview</div>
-        <div className="nav-item">⌖ &nbsp; Borewell reports</div>
-        <div className="nav-item">⚑ &nbsp; Risk monitoring</div>
-        <div className="nav-item">✓ &nbsp; Inspection tracking</div>
+        {NAV.map((n) => (
+          <div
+            key={n.id}
+            className={`nav-item${view === n.id ? " active" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => go(n.id)}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && go(n.id)}
+          >
+            {n.icon} &nbsp; {n.label}
+          </div>
+        ))}
 
         <div className="sidebar-bottom">
           <div className="status-dot" />
@@ -218,15 +292,14 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div>
-            <p className="eyebrow">SAFETY INTELLIGENCE / OVERVIEW</p>
-            <h1>Borewell Risk Dashboard</h1>
-            <p className="subtitle">
-              Identify hazards. Prioritise inspections. Track safer outcomes.
-            </p>
+            <p className="eyebrow">SAFETY INTELLIGENCE / {current.eyebrow}</p>
+            <h1>{current.title}</h1>
+            <p className="subtitle">{current.subtitle}</p>
           </div>
           <div className="prototype-badge">● PROTOTYPE</div>
         </header>
 
+        {view === "overview" && (
         <section className="welcome-panel">
           <div>
             <p className="welcome-label">PREVENTION FIRST</p>
@@ -239,6 +312,7 @@ function App() {
           </div>
           <div className="welcome-symbol" aria-hidden="true">⌖</div>
         </section>
+        )}
 
         {waking && (
           <div className="success-message">
@@ -248,13 +322,36 @@ function App() {
         )}
         {loadError && <div className="error-banner">{loadError}</div>}
 
-        <section className="metrics-grid">
-          <Metric label="Registered reports" value={reports.length} note="Stored in database" />
-          <Metric label="Critical priority" value={criticalCount} note="Urgent human review" />
-          <Metric label="Awaiting verification" value={openCount} note="Not confirmed safe" />
-          <Metric label="Verified safe" value={verifiedCount} note="Confirmed records only" />
-        </section>
+        {view === "overview" && (
+          <>
+            <section className="metrics-grid">
+              <Metric label="Registered reports" value={reports.length} note="Stored in database" />
+              <Metric label="Critical priority" value={criticalCount} note="Urgent human review" />
+              <Metric label="Awaiting verification" value={openCount} note="Not confirmed safe" />
+              <Metric label="Verified safe" value={verifiedCount} note="Confirmed records only" />
+            </section>
 
+            <section className="section-header">
+              <div>
+                <h2>Needs attention first</h2>
+                <p>Critical and High reports still waiting for an inspection, most urgent first.</p>
+              </div>
+              <button className="primary-button" onClick={startNewReport}>+ New report</button>
+            </section>
+
+            <section className="report-list">
+              {renderCards(attention.slice(0, 3), "Nothing urgent is waiting. All Critical and High reports have been inspected.")}
+            </section>
+            {attention.length > 3 && (
+              <p className="assumed-note">
+                {attention.length - 3} more waiting in{" "}
+                <button className="link-button" onClick={() => go("inspection")}>Inspection tracking</button>.
+              </p>
+            )}
+          </>
+        )}
+
+        {view === "reports" && (<>
         <section className="section-header">
           <div>
             <h2>Borewell reports</h2>
@@ -450,70 +547,72 @@ function App() {
         </section>
 
         <section className="report-list">
-          {loading && <p className="empty-state">Loading reports…</p>}
-
-          {!loading &&
-            visibleReports.map((report) => (
-              <article className="report-card" key={report.id}>
-                <div className="report-marker">⌖</div>
-                <div className="report-details">
-                  <div className="report-title-row">
-                    <h3>{report.location}</h3>
-                    <span className={`risk-badge ${report.risk_level.toLowerCase()}`}>
-                      {report.risk_level} priority
-                    </span>
-                  </div>
-                  <p className="report-id">
-                    {report.id} ·{" "}
-                    {isEscalated(report)
-                      ? `${percent(report.probabilities.Critical)} chance of Critical`
-                      : `confidence ${percent(report.confidence)}`}
-                    {isEscalated(report) && (
-                      <span
-                        style={precautionStyle}
-                        title="The model's most likely class was lower, but the chance of Critical was high enough that the safety rule raised it."
-                      >
-                        Raised as a precaution
-                      </span>
-                    )}{" "}
-                    ·{" "}
-                    {report.latitude != null && report.longitude != null
-                      ? `${report.latitude}, ${report.longitude}`
-                      : "Coordinates not supplied"}
-                  </p>
-                  <div className="report-facts">
-                    <span><b>Condition:</b> {report.inputs.cover_condition}</span>
-                    <span><b>Access:</b> {report.inputs.nearby_access}</span>
-                  </div>
-                  {report.top_factors.length > 0 && (
-                    <div className="chips">
-                      <span className="chips-label">Why:</span>
-                      {report.top_factors.map((f) => (
-                        <span className="chip" key={f.feature}>
-                          {f.label} ({Math.round(f.share * 100)}%)
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="report-status">Status: {report.status}</p>
-                </div>
-                <button
-                  className="inspect-button"
-                  onClick={() => markInspected(report.id)}
-                  disabled={report.status === "Inspection completed" || report.status === "Verified safe"}
-                >
-                  {report.status === "Inspection completed" ? "Inspected ✓" : "Mark inspected"}
-                </button>
-              </article>
-            ))}
-
-          {!loading && reports.length === 0 && !loadError && (
-            <p className="empty-state">No reports yet. Use “+ New report” to submit the first one.</p>
-          )}
-          {!loading && reports.length > 0 && visibleReports.length === 0 && (
-            <p className="empty-state">No reports match this risk level.</p>
+          {renderCards(
+            visibleReports,
+            reports.length === 0
+              ? "No reports yet. Use “+ New report” to submit the first one."
+              : "No reports match this risk level."
           )}
         </section>
+        </>)}
+
+        {view === "risk" && (
+          <>
+            <section className="metrics-grid">
+              <Metric label="Reports analysed" value={reports.length} note="All stored reports" />
+              <Metric label="Critical or High" value={highShare} note="Share of all reports" />
+              <Metric label="Urgent and pending" value={urgentPending} note="Critical/High, not inspected" />
+              <Metric label="Raised as precaution" value={escalatedCount} note="Escalated to Critical" />
+            </section>
+
+            <section className="panel">
+              <h3>Reports by risk level</h3>
+              <Bars rows={levelRows} />
+            </section>
+
+            <section className="panel">
+              <h3>Most common risk factors</h3>
+              <p className="form-note">How often each factor appears among a report's top reasons.</p>
+              {factorRows.length > 0 ? <Bars rows={factorRows} /> : <p className="empty-state">No factor data yet.</p>}
+            </section>
+
+            <p className="assumed-note">
+              Risk levels come from a model trained on synthetic data and are for prioritising
+              inspections only. Factor shares are approximate.
+            </p>
+          </>
+        )}
+
+        {view === "inspection" && (
+          <>
+            <section className="metrics-grid">
+              {statusRows.map((r) => (
+                <Metric key={r.label} label={r.label} value={r.count} note={
+                  r.label === "Pending inspection" ? "Waiting for a visit"
+                  : r.label === "Inspection completed" ? "Visited, awaiting sign-off"
+                  : "Confirmed safe on site"} />
+              ))}
+              <Metric label="Total reports" value={reports.length} note="All stored reports" />
+            </section>
+
+            <section className="section-header list-heading">
+              <div>
+                <h2>Inspection queue</h2>
+                <p>Sorted by risk level. Pending → Inspection completed → Verified safe.</p>
+              </div>
+              <label className="filter-control">
+                <span>Status</span>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  {STATUSES.map((st) => <option key={st}>{st}</option>)}
+                </select>
+              </label>
+            </section>
+
+            <section className="report-list">
+              {renderCards(inspectionList, `No reports with status “${statusFilter}”.`)}
+            </section>
+          </>
+        )}
 
         <footer>
           <span>BorewellGuard · AI-assisted hazard prevention</span>
@@ -522,6 +621,81 @@ function App() {
       </main>
     </div>
   );
+}
+
+function ReportCard({ report, onStatus }) {
+  const next =
+    report.status === "Pending inspection"
+      ? { label: "Mark inspected", status: "Inspection completed" }
+      : report.status === "Inspection completed"
+      ? { label: "Mark verified safe", status: "Verified safe" }
+      : null;
+  return (
+    <article className="report-card">
+      <div className="report-marker">⌖</div>
+      <div className="report-details">
+        <div className="report-title-row">
+          <h3>{report.location}</h3>
+          <span className={`risk-badge ${report.risk_level.toLowerCase()}`}>
+            {report.risk_level} priority
+          </span>
+        </div>
+        <p className="report-id">
+          {report.id} ·{" "}
+          {isEscalated(report)
+            ? `${percent(report.probabilities.Critical)} chance of Critical`
+            : `confidence ${percent(report.confidence)}`}
+          {isEscalated(report) && (
+            <span
+              style={precautionStyle}
+              title="The model's most likely class was lower, but the chance of Critical was high enough that the safety rule raised it."
+            >
+              Raised as a precaution
+            </span>
+          )}{" "}
+          ·{" "}
+          {report.latitude != null && report.longitude != null
+            ? `${report.latitude}, ${report.longitude}`
+            : "Coordinates not supplied"}
+        </p>
+        <div className="report-facts">
+          <span><b>Condition:</b> {report.inputs.cover_condition}</span>
+          <span><b>Access:</b> {report.inputs.nearby_access}</span>
+        </div>
+        {report.top_factors.length > 0 && (
+          <div className="chips">
+            <span className="chips-label">Why:</span>
+            {report.top_factors.map((f) => (
+              <span className="chip" key={f.feature}>
+                {f.label} ({Math.round(f.share * 100)}%)
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="report-status">Status: {report.status}</p>
+      </div>
+      {next ? (
+        <button className="inspect-button" onClick={() => onStatus(report.id, next.status)}>
+          {next.label}
+        </button>
+      ) : (
+        <button className="inspect-button" disabled>Verified safe ✓</button>
+      )}
+    </article>
+  );
+}
+
+function Bars({ rows }) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+  return rows.map((r) => (
+    <div className="factor-row" key={r.label}>
+      <span className="factor-label">{r.label}</span>
+      <div className="factor-bar">
+        <span style={{ width: `${(100 * r.count) / max}%`, background: r.color }} />
+      </div>
+      <span className="factor-value">{r.count}</span>
+    </div>
+  ));
 }
 
 function ResultPanel({ report, onClose }) {
