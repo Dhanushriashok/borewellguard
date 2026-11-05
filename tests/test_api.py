@@ -37,6 +37,11 @@ def test_health_reports_model(client):
     assert body["data_source"] == "synthetic"
 
 
+def test_health_accepts_head_for_uptime_monitors(client):
+    res = client.head("/api/health")
+    assert res.status_code == 200
+
+
 def test_risky_report_is_high_or_critical_with_factors(client):
     res = client.post("/api/reports", json=RISKY)
     assert res.status_code == 201

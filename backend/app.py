@@ -249,7 +249,8 @@ def run_model(features: dict) -> dict:
 # --------------------------------------------------------------------------- #
 # routes
 # --------------------------------------------------------------------------- #
-@app.get("/api/health")
+# HEAD is allowed too: uptime monitors (e.g. UptimeRobot free plan) probe with HEAD requests.
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     try:
         bundle = load_bundle()
